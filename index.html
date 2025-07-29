@@ -12,6 +12,8 @@
     .symbol { font-weight: bold; font-size: 1.2em; }
     .price { font-size: 1.4em; color: #333; }
     .label { font-size: 0.9em; color: #666; }
+    .error { color: #e74c3c; font-weight: bold; }
+    .success { color: #27ae60; }
   </style>
 </head>
 <body>
@@ -32,40 +34,42 @@
   </div>
 
   <script>
-    const ccxtProxy = new Proxy(ccxt, {
-      get: (target, prop) => {
-        if (typeof target[prop] === 'function') {
-          return (...args) => {
-            const exchange = new target[prop]();
-            exchange.proxy = 'https://corsproxy.io/?';
-            return exchange;
-          };
-        }
-        return target[prop];
-      }
-    });
+    // Função para criar exchange com proxy robusto
+    function createExchange(id) {
+      const exchange = new ccxt[id]();
+      exchange.proxy = 'https://api.allorigins.win/get?url=';
+      exchange.urls.api = exchange.urls.api.replace('https://', '');
+      return exchange;
+    }
 
-    const gate = ccxtProxy.gate();
-    const mexc = ccxtProxy.mexc();
+    const gate = createExchange('gate');
+    const mexc = createExchange('mexc');
 
-    async function fetchGateSpot() {
+    async function fetchTicker(exchange, symbol, callback) {
       try {
-        const ticker = await gate.fetchTicker('BTC/USDT');
-        document.getElementById('gate-price').textContent = ticker.last?.toFixed(2) || 'N/A';
+        const url = exchange.urls.api + '/' + exchange.implode_params(symbol, exchange.urls.api);
+        const response = await fetch(gate.proxy + encodeURIComponent('https://' + url));
+        const body = await response.json();
+        const ticker = exchange.parse_ticker(body.data || body, symbol);
+        callback(ticker.last);
       } catch (err) {
-        document.getElementById('gate-price').textContent = 'Erro';
-        console.error('Gate.io', err.message);
+        callback('Erro');
+        console.error('Erro ao buscar ' + symbol, err.message);
       }
     }
 
+    async function fetchGateSpot() {
+      fetchTicker(gate, 'BTC/USDT', (price) => {
+        document.getElementById('gate-price').textContent = price === 'Erro' ? 'Erro' : price.toFixed(2);
+        document.getElementById('gate-price').className = price === 'Erro' ? 'price error' : 'price success';
+      });
+    }
+
     async function fetchMexcFutures() {
-      try {
-        const ticker = await mexc.fetchTicker('BTC/USDT:USDT');
-        document.getElementById('mexc-price').textContent = ticker.last?.toFixed(2) || 'N/A';
-      } catch (err) {
-        document.getElementById('mexc-price').textContent = 'Erro';
-        console.error('MEXC', err.message);
-      }
+      fetchTicker(mexc, 'BTC/USDT:USDT', (price) => {
+        document.getElementById('mexc-price').textContent = price === 'Erro' ? 'Erro' : price.toFixed(2);
+        document.getElementById('mexc-price').className = price === 'Erro' ? 'price error' : 'price success';
+      });
     }
 
     function atualizar() {
@@ -73,8 +77,10 @@
       fetchMexcFutures();
     }
 
+    // Primeira atualização
     atualizar();
-    setInterval(atualizar, 10000);
+    // Depois a cada 15 segundos
+    setInterval(atualizar, 15000);
   </script>
 </body>
 </html>
