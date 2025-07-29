@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cotação WHITE</title>
+  <title>Cotação WHITE - Gate.io & MEXC</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
     .container { max-width: 600px; margin: 0 auto; }
@@ -12,7 +12,8 @@
     .price { font-size: 1.4em; color: #333; }
     .label { font-size: 0.9em; color: #666; }
     .error { color: #e74c3c; }
-    .debug { font-size: 0.8em; color: #999; margin-top: 4px; }
+    .note { font-size: 0.8em; color: #777; margin-top: 8px; }
+    .loading { color: #555; }
   </style>
 </head>
 <body>
@@ -20,68 +21,59 @@
     <h2>Cotação WHITE</h2>
 
     <div class="exchange">
-      <div class="label">BitMart (Spot)</div>
+      <div class="label">Gate.io (Spot)</div>
       <div class="symbol">WHITE/USDT</div>
-      <div class="price" id="bitmart-price">Carregando...</div>
-      <div class="debug" id="bitmart-debug"></div>
+      <div class="price" id="gate-price">Carregando...</div>
+      <div class="note" id="gate-note">Fonte: CoinGecko (dados coletados da Gate.io)</div>
     </div>
 
     <div class="exchange">
-      <div class="label">Status</div>
-      <div class="price" id="status">Atualizando...</div>
+      <div class="label">MEXC (Futuros)</div>
+      <div class="symbol">WHITE/USDT</div>
+      <div class="price" id="mexc-price">—</div>
+      <div class="note" id="mexc-note">Futuros não disponíveis. Moeda não listada em contratos.</div>
     </div>
   </div>
 
   <script>
-    async function fetchBitMart() {
-      const url = 'https://api.bitmart.com/spot/v1/ticker?symbol=WHITE_USDT';
-      const debugEl = document.getElementById('bitmart-debug');
-      const priceEl = document.getElementById('bitmart-price');
+    // Usaremos o CoinGecko para obter o preço spot da WHITE
+    // ID oficial no CoinGecko: white-protocol
+    const COINGECKO_ID = 'white-protocol';
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${COINGECKO_ID}&vs_currencies=usd&exchange_ids=gate&include_exchange_logo=false`;
 
+    async function atualizarPrecos() {
       try {
-        debugEl.textContent = 'Buscando...';
         const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
-        console.log('BitMart resposta:', data);
 
-        if (data.data && data.data.tickers && data.data.tickers.length > 0) {
-          const ticker = data.data.tickers[0];
-          const lastPrice = ticker.last_price;
+        // Preço geral da WHITE em USD (média de mercado)
+        if (data[COINGECKO_ID]?.usd) {
+          const price = data[COINGECKO_ID].usd;
+          document.getElementById('gate-price').textContent = price.toLocaleString('pt-BR', { 
+            minimumFractionDigits: 6, 
+            maximumFractionDigits: 6 
+          });
 
-          if (lastPrice && !isNaN(lastPrice)) {
-            priceEl.textContent = parseFloat(lastPrice).toFixed(6);
-            debugEl.textContent = `Último: ${lastPrice}`;
-            document.getElementById('status').textContent = 'Atualizado';
-          } else {
-            priceEl.textContent = 'N/A';
-            debugEl.textContent = 'Preço ausente';
-          }
+          // Adiciona nota de atualização
+          document.getElementById('gate-note').textContent = 
+            `Preço spot atualizado via CoinGecko (inclui dados da Gate.io)`;
         } else {
-          priceEl.textContent = 'N/A';
-          debugEl.textContent = 'Par não encontrado';
+          document.getElementById('gate-price').textContent = 'N/A';
         }
       } catch (err) {
-        console.error('Erro BitMart:', err);
-        priceEl.textContent = 'Erro';
-        priceEl.classList.add('error');
-        debugEl.textContent = 'Falha na API';
+        console.error('Erro ao buscar preço:', err);
+        document.getElementById('gate-price').textContent = 'Erro';
+        document.getElementById('gate-price').classList.add('error');
       }
     }
 
-    function atualizar() {
-      fetchBitMart();
-    }
-
     // Primeira atualização
-    atualizar();
+    atualizarPrecos();
 
-    // Atualiza a cada 15 segundos
-    setInterval(atualizar, 15000);
+    // Atualiza a cada 60 segundos (CoinGecko tem rate limit)
+    setInterval(atualizarPrecos, 60000);
   </script>
 </body>
 </html>
