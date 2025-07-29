@@ -32,39 +32,43 @@
   </div>
 
   <script>
-    async function fetchGateSpot() {
-      try {
-        // API v4 do Gate.io - spot tickers
-        const response = await fetch('https://api.gate.io/api/v4/spot/tickers?currency_pair=WHITE_USDT');
-        const data = await response.json();
+    // Função para buscar dados com proxy (evita CORS)
+    async function fetchWithProxy(url) {
+      const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+      const response = await fetch(proxyUrl);
+      const data = await response.json();
+      return JSON.parse(data.contents); // O conteúdo real está em data.contents
+    }
 
-        if (data && data.length > 0 && data[0].last) {
+    async function fetchGateSpot() {
+      const url = 'https://api.gate.io/api/v4/spot/tickers?currency_pair=WHITE_USDT';
+      try {
+        const data = await fetchWithProxy(url);
+        if (data && Array.isArray(data) && data.length > 0 && data[0].last) {
           document.getElementById('gate-price').textContent = parseFloat(data[0].last).toFixed(6);
         } else {
           document.getElementById('gate-price').textContent = 'N/A';
         }
       } catch (err) {
+        console.error('Gate.io erro:', err);
         document.getElementById('gate-price').textContent = 'Erro';
         document.getElementById('gate-price').classList.add('error');
-        console.error('Gate.io', err);
       }
     }
 
     async function fetchMexcFutures() {
+      const url = 'https://contract.mexc.com/api/v1/contract/ticker/WHITE_USDT';
       try {
-        // API de preço atual do contrato futuros da MEXC
-        const response = await fetch('https://contract.mexc.com/api/v1/contract/ticker/WHITE_USDT');
-        const data = await response.json();
-
-        if (data.success && data.data?.lastPrice !== undefined) {
+        const data = await fetchWithProxy(url);
+        if (data.success && data.data && data.data.lastPrice !== undefined) {
           document.getElementById('mexc-price').textContent = parseFloat(data.data.lastPrice).toFixed(6);
         } else {
           document.getElementById('mexc-price').textContent = 'N/A';
         }
       } catch (err) {
+        console.error('MEXC erro:', err);
         document.getElementById('mexc-price').textContent = 'Erro';
         document.getElementById('mexc-price').classList.add('error');
-        console.error('MEXC', err);
       }
     }
 
@@ -75,6 +79,7 @@
 
     // Primeira atualização
     atualizar();
+
     // Atualiza a cada 10 segundos
     setInterval(atualizar, 10000);
   </script>
