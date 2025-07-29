@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cotação BTC</title>
-  <script src="https://cdn.jsdelivr.net/npm/ccxt@1.105.54/dist/ccxt.browser.js"></script>
+  <title>Cotação WHITE</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
     .container { max-width: 600px; margin: 0 auto; }
@@ -12,64 +11,57 @@
     .symbol { font-weight: bold; font-size: 1.2em; }
     .price { font-size: 1.4em; color: #333; }
     .label { font-size: 0.9em; color: #666; }
-    .error { color: #e74c3c; font-weight: bold; }
-    .success { color: #27ae60; }
+    .error { color: #e74c3c; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Cotação BTC</h2>
+    <h2>Cotação WHITE</h2>
 
     <div class="exchange">
       <div class="label">Gate.io (Spot)</div>
-      <div class="symbol">BTC/USDT</div>
+      <div class="symbol">WHITE/USDT</div>
       <div class="price" id="gate-price">Carregando...</div>
     </div>
 
     <div class="exchange">
       <div class="label">MEXC (Futuros)</div>
-      <div class="symbol">BTC/USDT (Futuros)</div>
+      <div class="symbol">WHITE/USDT (Futuros)</div>
       <div class="price" id="mexc-price">Carregando...</div>
     </div>
   </div>
 
   <script>
-    // Função para criar exchange com proxy robusto
-    function createExchange(id) {
-      const exchange = new ccxt[id]();
-      exchange.proxy = 'https://api.allorigins.win/get?url=';
-      exchange.urls.api = exchange.urls.api.replace('https://', '');
-      return exchange;
-    }
-
-    const gate = createExchange('gate');
-    const mexc = createExchange('mexc');
-
-    async function fetchTicker(exchange, symbol, callback) {
+    async function fetchGateSpot() {
       try {
-        const url = exchange.urls.api + '/' + exchange.implode_params(symbol, exchange.urls.api);
-        const response = await fetch(gate.proxy + encodeURIComponent('https://' + url));
-        const body = await response.json();
-        const ticker = exchange.parse_ticker(body.data || body, symbol);
-        callback(ticker.last);
+        const response = await fetch('https://api.gate.io/api2/1/ticker/white_usdt');
+        const data = await response.json();
+        if (data.result === 'true' && data.last) {
+          document.getElementById('gate-price').textContent = parseFloat(data.last).toFixed(6);
+        } else {
+          document.getElementById('gate-price').textContent = 'N/A';
+        }
       } catch (err) {
-        callback('Erro');
-        console.error('Erro ao buscar ' + symbol, err.message);
+        document.getElementById('gate-price').textContent = 'Erro';
+        document.getElementById('gate-price').classList.add('error');
+        console.error('Gate.io', err);
       }
     }
 
-    async function fetchGateSpot() {
-      fetchTicker(gate, 'BTC/USDT', (price) => {
-        document.getElementById('gate-price').textContent = price === 'Erro' ? 'Erro' : price.toFixed(2);
-        document.getElementById('gate-price').className = price === 'Erro' ? 'price error' : 'price success';
-      });
-    }
-
     async function fetchMexcFutures() {
-      fetchTicker(mexc, 'BTC/USDT:USDT', (price) => {
-        document.getElementById('mexc-price').textContent = price === 'Erro' ? 'Erro' : price.toFixed(2);
-        document.getElementById('mexc-price').className = price === 'Erro' ? 'price error' : 'price success';
-      });
+      try {
+        const response = await fetch('https://contract.mexc.com/api/v1/contract/last_price/WHITE_USDT');
+        const data = await response.json();
+        if (data.success && data.data) {
+          document.getElementById('mexc-price').textContent = parseFloat(data.data.lastPrice).toFixed(6);
+        } else {
+          document.getElementById('mexc-price').textContent = 'N/A';
+        }
+      } catch (err) {
+        document.getElementById('mexc-price').textContent = 'Erro';
+        document.getElementById('mexc-price').classList.add('error');
+        console.error('MEXC', err);
+      }
     }
 
     function atualizar() {
@@ -79,8 +71,8 @@
 
     // Primeira atualização
     atualizar();
-    // Depois a cada 15 segundos
-    setInterval(atualizar, 15000);
+    // A cada 10 segundos
+    setInterval(atualizar, 10000);
   </script>
 </body>
 </html>
