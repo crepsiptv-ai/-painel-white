@@ -20,106 +20,67 @@
     <h2>Cotação WHITE</h2>
 
     <div class="exchange">
-      <div class="label">Gate.io (Spot)</div>
+      <div class="label">BitMart (Spot)</div>
       <div class="symbol">WHITE/USDT</div>
-      <div class="price" id="gate-price">Carregando...</div>
-      <div class="debug" id="gate-debug"></div>
+      <div class="price" id="bitmart-price">Carregando...</div>
+      <div class="debug" id="bitmart-debug"></div>
     </div>
 
     <div class="exchange">
-      <div class="label">MEXC (Futuros)</div>
-      <div class="symbol">WHITE/USDT (Futuros)</div>
-      <div class="price" id="mexc-price">Carregando...</div>
-      <div class="debug" id="mexc-debug"></div>
+      <div class="label">Status</div>
+      <div class="price" id="status">Atualizando...</div>
     </div>
   </div>
 
   <script>
-    async function fetchWithProxy(url) {
-      const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
-      try {
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        if (data && data.contents) {
-          return JSON.parse(data.contents);
-        } else {
-          throw new Error("Resposta vazia ou inválida do proxy");
-        }
-      } catch (err) {
-        console.error("Erro no fetchWithProxy:", err);
-        throw err;
-      }
-    }
-
-    async function fetchGateSpot() {
-      const url = 'https://api.gate.io/api/v4/spot/tickers?currency_pair=WHITE_USDT';
-      const debugEl = document.getElementById('gate-debug');
+    async function fetchBitMart() {
+      const url = 'https://api.bitmart.com/spot/v1/ticker?symbol=WHITE_USDT';
+      const debugEl = document.getElementById('bitmart-debug');
+      const priceEl = document.getElementById('bitmart-price');
 
       try {
         debugEl.textContent = 'Buscando...';
-        const data = await fetchWithProxy(url);
+        const response = await fetch(url);
 
-        console.log('Gate.io resposta:', data);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
 
-        if (Array.isArray(data) && data.length > 0) {
-          const ticker = data[0];
-          if (ticker.last) {
-            document.getElementById('gate-price').textContent = parseFloat(ticker.last).toFixed(6);
-            debugEl.textContent = `Ok: ${ticker.last}`;
+        const data = await response.json();
+        console.log('BitMart resposta:', data);
+
+        if (data.data && data.data.tickers && data.data.tickers.length > 0) {
+          const ticker = data.data.tickers[0];
+          const lastPrice = ticker.last_price;
+
+          if (lastPrice && !isNaN(lastPrice)) {
+            priceEl.textContent = parseFloat(lastPrice).toFixed(6);
+            debugEl.textContent = `Último: ${lastPrice}`;
+            document.getElementById('status').textContent = 'Atualizado';
           } else {
-            document.getElementById('gate-price').textContent = 'N/A';
-            debugEl.textContent = 'Dado incompleto';
+            priceEl.textContent = 'N/A';
+            debugEl.textContent = 'Preço ausente';
           }
         } else {
-          document.getElementById('gate-price').textContent = 'N/A';
+          priceEl.textContent = 'N/A';
           debugEl.textContent = 'Par não encontrado';
         }
       } catch (err) {
-        document.getElementById('gate-price').textContent = 'Erro';
-        document.getElementById('gate-price').classList.add('error');
-        debugEl.textContent = 'Falha na requisição';
-        console.error('Gate.io erro:', err);
-      }
-    }
-
-    async function fetchMexcFutures() {
-      const url = 'https://contract.mexc.com/api/v1/contract/ticker/WHITE_USDT';
-      const debugEl = document.getElementById('mexc-debug');
-
-      try {
-        debugEl.textContent = 'Buscando...';
-        const data = await fetchWithProxy(url);
-
-        console.log('MEXC resposta:', data);
-
-        if (data.success === true && data.data && typeof data.data.lastPrice === 'number') {
-          document.getElementById('mexc-price').textContent = parseFloat(data.data.lastPrice).toFixed(6);
-          debugEl.textContent = `Ok: ${data.data.lastPrice}`;
-        } else if (data.code === 100001 || !data.success) {
-          debugEl.textContent = 'Par não listado';
-          document.getElementById('mexc-price').textContent = 'N/A';
-        } else {
-          debugEl.textContent = 'Resposta inesperada';
-          document.getElementById('mexc-price').textContent = 'N/A';
-        }
-      } catch (err) {
-        document.getElementById('mexc-price').textContent = 'Erro';
-        document.getElementById('mexc-price').classList.add('error');
-        debugEl.textContent = 'Falha na requisição';
-        console.error('MEXC erro:', err);
+        console.error('Erro BitMart:', err);
+        priceEl.textContent = 'Erro';
+        priceEl.classList.add('error');
+        debugEl.textContent = 'Falha na API';
       }
     }
 
     function atualizar() {
-      fetchGateSpot();
-      fetchMexcFutures();
+      fetchBitMart();
     }
 
     // Primeira atualização
     atualizar();
 
-    // Atualiza a cada 15 segundos (mais gentil com proxy)
+    // Atualiza a cada 15 segundos
     setInterval(atualizar, 15000);
   </script>
 </body>
