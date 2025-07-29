@@ -34,10 +34,12 @@
   <script>
     async function fetchGateSpot() {
       try {
-        const response = await fetch('https://api.gate.io/api2/1/ticker/white_usdt');
+        // API v4 do Gate.io - spot tickers
+        const response = await fetch('https://api.gate.io/api/v4/spot/tickers?currency_pair=WHITE_USDT');
         const data = await response.json();
-        if (data.result === 'true' && data.last) {
-          document.getElementById('gate-price').textContent = parseFloat(data.last).toFixed(6);
+
+        if (data && data.length > 0 && data[0].last) {
+          document.getElementById('gate-price').textContent = parseFloat(data[0].last).toFixed(6);
         } else {
           document.getElementById('gate-price').textContent = 'N/A';
         }
@@ -50,9 +52,11 @@
 
     async function fetchMexcFutures() {
       try {
-        const response = await fetch('https://contract.mexc.com/api/v1/contract/last_price/WHITE_USDT');
+        // API de preço atual do contrato futuros da MEXC
+        const response = await fetch('https://contract.mexc.com/api/v1/contract/ticker/WHITE_USDT');
         const data = await response.json();
-        if (data.success && data.data) {
+
+        if (data.success && data.data?.lastPrice !== undefined) {
           document.getElementById('mexc-price').textContent = parseFloat(data.data.lastPrice).toFixed(6);
         } else {
           document.getElementById('mexc-price').textContent = 'N/A';
@@ -71,7 +75,7 @@
 
     // Primeira atualização
     atualizar();
-    // A cada 10 segundos
+    // Atualiza a cada 10 segundos
     setInterval(atualizar, 10000);
   </script>
 </body>
