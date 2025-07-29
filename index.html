@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cotação WHITE - Gate.io & MEXC</title>
+  <title>Cotação WHITE</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
     .container { max-width: 600px; margin: 0 auto; }
@@ -13,67 +13,123 @@
     .label { font-size: 0.9em; color: #666; }
     .error { color: #e74c3c; }
     .note { font-size: 0.8em; color: #777; margin-top: 8px; }
-    .loading { color: #555; }
+    .market { background: #e6f7ff; border-left: 4px solid #1890ff; }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Cotação WHITE</h2>
 
+    <!-- Gate.io (Spot) -->
     <div class="exchange">
       <div class="label">Gate.io (Spot)</div>
       <div class="symbol">WHITE/USDT</div>
       <div class="price" id="gate-price">Carregando...</div>
-      <div class="note" id="gate-note">Fonte: CoinGecko (dados coletados da Gate.io)</div>
+      <div class="note" id="gate-note"></div>
     </div>
 
+    <!-- MEXC (Futuros) -->
     <div class="exchange">
       <div class="label">MEXC (Futuros)</div>
       <div class="symbol">WHITE/USDT</div>
       <div class="price" id="mexc-price">—</div>
-      <div class="note" id="mexc-note">Futuros não disponíveis. Moeda não listada em contratos.</div>
+      <div class="note" id="mexc-note">⚠️ Não listado na MEXC (spot nem futuros)</div>
+    </div>
+
+    <!-- Preço de Mercado (Fonte Oficial) -->
+    <div class="exchange market">
+      <div class="label">Preço de Mercado (Fonte)</div>
+      <div class="symbol">WHITE/USDT</div>
+      <div class="price" id="market-price">Carregando...</div>
+      <div class="note" id="market-note">
+        Dados reais de exchanges ativas (ex: BitMart, Toobit). Atualizado via CoinGecko.
+      </div>
     </div>
   </div>
 
   <script>
-    // Usaremos o CoinGecko para obter o preço spot da WHITE
-    // ID oficial no CoinGecko: white-protocol
-    const COINGECKO_ID = 'white-protocol';
-    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${COINGECKO_ID}&vs_currencies=usd&exchange_ids=gate&include_exchange_logo=false`;
+    // === 1. TENTAR GATE.IO (API OFICIAL COM PROXY) ===
+    async function fetchGate() {
+      const url = 'https://api.gate.io/api/v4/spot/tickers?currency_pair=WHITE_USDT';
+      const proxy = 'https://api.allorigins.win/get?url=';
+      const priceEl = document.getElementById('gate-price');
+      const noteEl = document.getElementById('gate-note');
 
-    async function atualizarPrecos() {
+      try {
+        const response = await fetch(proxy + encodeURIComponent(url));
+        const data = await response.json();
+        const ticker = JSON.parse(data.contents);
+
+        console.log('Gate.io response:', ticker);
+
+        if (Array.isArray(ticker) && ticker.length > 0 && ticker[0].last) {
+          const last = parseFloat(ticker[0].last);
+          priceEl.textContent = last.toFixed(6);
+          noteEl.textContent = `Último: ${last}`;
+        } else {
+          priceEl.textContent = 'N/A';
+          noteEl.textContent = 'Par não encontrado na Gate.io';
+        }
+      } catch (err) {
+        priceEl.textContent = 'Erro';
+        priceEl.classList.add('error');
+        noteEl.textContent = 'Falha na API (CORS ou não listado)';
+        console.error('Gate.io erro:', err);
+      }
+    }
+
+    // === 2. MEXC: NÃO TEM → MOSTRAR NÃO LISTADO ===
+    function fetchMexc() {
+      // Nada a fazer — não tem
+      console.log('MEXC: WHITE não está listado');
+    }
+
+    // === 3. PREÇO REAL DE MERCADO (CoinGecko) ===
+    async function fetchMarketPrice() {
+      const url = 'https://api.coingecko.com/api/v3/simple/price?ids=white-protocol&vs_currencies=usd&include_last_updated_at=true';
+      const priceEl = document.getElementById('market-price');
+      const noteEl = document.getElementById('market-note');
+
       try {
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
 
-        // Preço geral da WHITE em USD (média de mercado)
-        if (data[COINGECKO_ID]?.usd) {
-          const price = data[COINGECKO_ID].usd;
-          document.getElementById('gate-price').textContent = price.toLocaleString('pt-BR', { 
-            minimumFractionDigits: 6, 
-            maximumFractionDigits: 6 
+        if (data['white-protocol']?.usd) {
+          const price = data['white-protocol'].usd;
+          const updated = new Date(data['white-protocol'].last_updated_at).toLocaleTimeString();
+
+          priceEl.textContent = price.toLocaleString('pt-BR', {
+            minimumFractionDigits: 6,
+            maximumFractionDigits: 6
           });
 
-          // Adiciona nota de atualização
-          document.getElementById('gate-note').textContent = 
-            `Preço spot atualizado via CoinGecko (inclui dados da Gate.io)`;
+          noteEl.textContent = `Fonte: CoinGecko | Atualizado: ${updated}`;
         } else {
-          document.getElementById('gate-price').textContent = 'N/A';
+          priceEl.textContent = 'N/A';
+          noteEl.textContent = 'Dados não disponíveis';
         }
       } catch (err) {
-        console.error('Erro ao buscar preço:', err);
-        document.getElementById('gate-price').textContent = 'Erro';
-        document.getElementById('gate-price').classList.add('error');
+        console.error('Erro CoinGecko:', err);
+        priceEl.textContent = 'Erro';
+        priceEl.classList.add('error');
+        noteEl.textContent = 'Falha ao carregar preço de mercado';
       }
     }
 
-    // Primeira atualização
-    atualizarPrecos();
+    // === ATUALIZAR TUDO ===
+    function atualizar() {
+      fetchGate();
+      fetchMexc();
+      fetchMarketPrice();
+    }
 
-    // Atualiza a cada 60 segundos (CoinGecko tem rate limit)
-    setInterval(atualizarPrecos, 60000);
+    // Primeira atualização
+    atualizar();
+
+    // Depois, a cada 60 segundos
+    setInterval(atualizar, 60000);
   </script>
 </body>
 </html>
