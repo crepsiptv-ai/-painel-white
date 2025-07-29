@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>WHITE - Cotação</title>
+  <title>Cotação BTC</title>
   <script src="https://cdn.jsdelivr.net/npm/ccxt@1.105.54/dist/ccxt.browser.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
@@ -16,17 +16,17 @@
 </head>
 <body>
   <div class="container">
-    <h2>Cotação WHITE</h2>
+    <h2>Cotação BTC</h2>
 
     <div class="exchange">
       <div class="label">Gate.io (Spot)</div>
-      <div class="symbol">WHITE/USDT</div>
+      <div class="symbol">BTC/USDT</div>
       <div class="price" id="gate-price">Carregando...</div>
     </div>
 
     <div class="exchange">
       <div class="label">MEXC (Futuros)</div>
-      <div class="symbol">WHITE/USDT (Futuros)</div>
+      <div class="symbol">BTC/USDT (Futuros)</div>
       <div class="price" id="mexc-price">Carregando...</div>
     </div>
   </div>
@@ -50,8 +50,8 @@
 
     async function fetchGateSpot() {
       try {
-        const ticker = await gate.fetchTicker('WHITE/USDT');
-        document.getElementById('gate-price').textContent = ticker.last?.toFixed(6) || 'N/A';
+        const ticker = await gate.fetchTicker('BTC/USDT');
+        document.getElementById('gate-price').textContent = ticker.last?.toFixed(2) || 'N/A';
       } catch (err) {
         document.getElementById('gate-price').textContent = 'Erro';
         console.error('Gate.io', err.message);
@@ -60,8 +60,8 @@
 
     async function fetchMexcFutures() {
       try {
-        const ticker = await mexc.fetchTicker('WHITE/USDT:USDT');
-        document.getElementById('mexc-price').textContent = ticker.last?.toFixed(6) || 'N/A';
+        const ticker = await mexc.fetchTicker('BTC/USDT:USDT');
+        document.getElementById('mexc-price').textContent = ticker.last?.toFixed(2) || 'N/A';
       } catch (err) {
         document.getElementById('mexc-price').textContent = 'Erro';
         console.error('MEXC', err.message);
