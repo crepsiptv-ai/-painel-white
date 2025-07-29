@@ -1,57 +1,67 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Cotação WHITE (Solução Definitiva)</title>
+  <title>TESTE REAL - WEMIX na Gate.io</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
-    .box { padding: 15px; margin: 10px 0; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .price { font-size: 1.5em; margin: 8px 0; }
-    .error { color: #c00; }
+    body { font-family: monospace; padding: 20px; }
+    .result { margin: 20px 0; padding: 15px; background: #f0f0f0; border-radius: 5px; }
   </style>
 </head>
 <body>
-  <h1>Cotação WHITE</h1>
-
-  <div class="box">
-    <h3>Gate.io (Spot)</h3>
-    <div class="price" id="gate">...</div>
-  </div>
-
-  <div class="box">
-    <h3>MEXC (Futuros)</h3>
-    <div class="price" id="mexc">...</div>
-  </div>
+  <h1>TESTE DE CONEXÃO COM API</h1>
+  <p>Este teste verifica se SUA MÁQUINA consegue acessar APIs de exchanges.</p>
+  
+  <div class="result" id="gate-test">_gate.io: aguardando...</div>
+  <div class="result" id="mexc-test">_mexc.com: aguardando...</div>
+  <div class="result" id="proxy-test">_proxy: aguardando...</div>
 
   <script>
-    // PROXY UNIVERSAL (funciona em redes bloqueadas)
-    const proxy = 'https://api.allorigins.win/raw?url=';
-
-    // 1. GATE.IO com proxy
-    fetch(proxy + encodeURIComponent('https://api.gate.io/api/v4/spot/tickers?currency_pair=WHITE_USDT'))
+    // 1. TESTE DIRETO NA GATE.IO (sem proxy)
+    fetch('https://api.gate.io/api/v4/spot/tickers?currency_pair=WEMIX_USDT')
       .then(r => r.json())
       .then(data => {
-        if (data[0]?.last) {
-          document.getElementById('gate').textContent = parseFloat(data[0].last).toFixed(6) + ' USDT';
-        } else {
-          document.getElementById('gate').innerHTML = '<span class="error">❌ Não listado</span>';
-        }
+        const price = data[0]?.last || 'ERRO';
+        document.getElementById('gate-test').innerHTML = 
+          `<b>✅ SUCESSO na Gate.io</b><br>
+           Preço WEMIX/USDT: ${price}<br>
+           Resposta completa: ${JSON.stringify(data).substr(0, 100)}...`;
       })
-      .catch(() => {
-        document.getElementById('gate').innerHTML = '<span class="error">🌐 Rede bloqueada</span>';
+      .catch(err => {
+        document.getElementById('gate-test').innerHTML = 
+          `<b>❌ FALHA na Gate.io</b><br>
+           Erro: ${err.message}<br>
+           Isso significa que SUA REDE BLOQUEIA APIs DE EXCHANGES.`;
       });
 
-    // 2. MEXC com proxy
-    fetch(proxy + encodeURIComponent('https://contract.mexc.com/api/v1/contract/ticker/WHITE_USDT'))
+    // 2. TESTE NA MEXC
+    fetch('https://www.mexc.com')
+      .then(r => {
+        document.getElementById('mexc-test').innerHTML = 
+          `<b>✅ MEXC acessível</b><br>
+           O site da MEXC carrega normalmente.`;
+      })
+      .catch(err => {
+        document.getElementById('mexc-test').innerHTML = 
+          `<b>❌ MEXC BLOQUEADA</b><br>
+           Erro: ${err.message}<br>
+           Sua rede/provedor bloqueia exchanges de cripto.`;
+      });
+
+    // 3. TESTE COM PROXY (para casos extremos)
+    fetch('https://api.allorigins.win/get?url=' + 
+      encodeURIComponent('https://api.gate.io/api/v4/spot/tickers?currency_pair=BTC_USDT'))
       .then(r => r.json())
       .then(data => {
-        if (data.success && data.data?.lastPrice) {
-          document.getElementById('mexc').textContent = parseFloat(data.data.lastPrice).toFixed(6) + ' USDT';
-        } else {
-          document.getElementById('mexc').innerHTML = '<span class="error">❌ Não listado</span>';
-        }
+        const price = JSON.parse(data.contents)[0]?.last || 'ERRO';
+        document.getElementById('proxy-test').innerHTML = 
+          `<b>✅ PROXY FUNCIONANDO</b><br>
+           Preço BTC/USDT via proxy: ${price}`;
       })
-      .catch(() => {
-        document.getElementById('mexc').innerHTML = '<span class="error">🌐 Rede bloqueada</span>';
+      .catch(err => {
+        document.getElementById('proxy-test').innerHTML = 
+          `<b>❌ PROXY FALHOU</b><br>
+           Erro: ${err.message}<br>
+           Você está em rede corporativa/bloqueada.`;
       });
   </script>
 </body>
