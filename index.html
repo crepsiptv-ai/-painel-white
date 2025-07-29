@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WHITE - Cotação em Tempo Real</title>
+  <meta name="description" content="Cotação ao vivo de WHITE na Gate.io (spot) e MEXC (futuros)" />
+  <script src="https://cdn.jsdelivr.net/npm/ccxt@1.105.54/dist/ccxt.browser.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 20px;
+    }
+    .exchange {
+      padding: 18px;
+      margin: 15px 0;
+      background: #f8f9fa;
+      border-left: 4px solid #3498db;
+      border-radius: 8px;
+    }
+    .label {
+      font-size: 0.9em;
+      color: #7f8c8d;
+      margin-bottom: 6px;
+    }
+    .symbol {
+      font-weight: 600;
+      font-size: 1.1em;
+      color: #2c3e50;
+    }
+    .price {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #27ae60;
+      margin-top: 8px;
+    }
+    .error {
+      color: #e74c3c !important;
+    }
+    .loading {
+      color: #95a5a6;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📊 Cotação WHITE/USDT</h2>
+
+    <div class="exchange">
+      <div class="label">Exchange</div>
+      <div class="symbol">Gate.io (Spot)</div>
+      <div class="price" id="gate-price">Carregando...</div>
+    </div>
+
+    <div class="exchange">
+      <div class="label">Mercado</div>
+      <div class="symbol">MEXC (Futuros)</div>
+      <div class="price" id="mexc-price">Carregando...</div>
+    </div>
+
+    <p style="text-align: center; font-size: 0.8em; color: #bdc3c7; margin-top: 30px;">
+      Atualizado a cada 10 segundos
+    </p>
+  </div>
+
+  <script>
+    // Adiciona proxy para evitar CORS
+    const ccxtProxy = new Proxy(ccxt, {
+      get: (target, prop) => {
+        if (typeof target[prop] === 'function') {
+          return (...args) => {
+            const exchange = new target[prop]();
+            exchange.proxy = 'https://corsproxy.io/?';
+            exchange.headers = { 'Origin': 'https://corsproxy.io' };
+            return exchange;
+          };
+        }
+        return target[prop];
+      }
+    });
+
+    const gate = ccxtProxy.gate();
+    const mexc = ccxtProxy.mexc();
+
+    async function fetchGateSpot() {
+      try {
+        const ticker = await gate.fetchTicker('WHITE/USDT');
+        const priceElement = document.getElementById('gate-price');
+        priceElement.textContent = ticker.last ? ticker.last.toFixed(6) : 'N/A';
+        priceElement.className = 'price';
+      } catch (err) {
+        console.error('Gate.io erro:', err.message);
+        document.getElementById('gate-price').textContent = 'Erro';
+        document.getElementById('gate-price').className = 'price error';
+      }
+    }
+
+    async function fetchMexcFutures() {
+      try {
+        const ticker = await mexc.fetchTicker('WHITE/USDT:USDT');
+        const priceElement = document.getElementById('mexc-price');
+        priceElement.textContent = ticker.last ? ticker.last.toFixed(6) : 'N/A';
+        priceElement.className = 'price';
+      } catch (err) {
+        console.error('MEXC Futuros erro:', err.message);
+        document.getElementById('mexc-price').textContent = 'Erro';
+        document.getElementById('mexc-price').className = 'price error';
+      }
+    }
+
+    function atualizar() {
+      fetchGateSpot();
+      fetchMexcFutures();
+    }
+
+    // Primeira atualização
+    atualizar();
+    // Depois a cada 10 segundos
+    setInterval(atualizar, 10000);
+  </script>
+</body>
+</html>
